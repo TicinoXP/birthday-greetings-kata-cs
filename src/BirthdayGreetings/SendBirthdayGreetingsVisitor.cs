@@ -17,19 +17,45 @@ class SendBirthdayGreetingsVisitor : IVisitor<Employee>
 
     void IVisitor<Employee>.Visit(Employee employee)
     {
-        if (employee.IsBirthday(Today))
-        {
-            SendMessage(
+        IsBirthday(employee).Match(
+            () => 0,
+            employee => SendMessage(
                 from: "sender@here.com",
                 recipient: employee.Email,
-                greetings: _greetingsFactory.MakeFor(employee));
-        }
+                greetings: _greetingsFactory.MakeFor(employee))
+        );
     }
 
-    private void SendMessage(string from, string recipient, Greetings greetings)
+    private Option IsBirthday(Employee employee) => 
+        employee.IsBirthday(Today) ? new Some(employee) : new None();
+
+    private int SendMessage(string from, string recipient, Greetings greetings)
     {
         var message = new MailMessage(from, recipient, greetings.Salutation, greetings.Message);
 
         _smtpClient.Send(message);
+        
+        return 1;
     }
+}
+
+interface Option
+{
+    internal T Match<T>(Func<T> whenNone, Func<Employee, T> whenSome);
+}
+
+class Some : Option
+{
+    private readonly Employee _employee;
+
+    internal Some(Employee employee)
+    {
+        _employee = employee;
+    }
+
+    public T Match<T>(Func<T> whenNone, Func<Employee, T> whenSome) => whenSome(_employee);
+}
+class None : Option
+{
+    T Option.Match<T>(Func<T> whenNone, Func<Employee, T> whenSome) => whenNone();
 }
