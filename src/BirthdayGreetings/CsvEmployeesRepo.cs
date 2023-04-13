@@ -1,41 +1,33 @@
 namespace BirthdayGreetings;
 
-public class CsvEmployeesRepo : IEmployeesRepo
+internal class CsvEmployeesRepo : IEmployeesRepo
 {
-  private readonly string _fileName;
+    private readonly string _fileName;
+    private readonly EmployeeFactory _employeeFactory;
+    private readonly List<Employee> _employees = new();
 
-  public CsvEmployeesRepo(string fileName)
-    => _fileName = fileName;
-
-  public List<Employee> FindAllEmployees()
-  {
-    using StreamReader input = new(_fileName);
-    SkipHeader(input);
-    return ReadAllEmployeesFromCsv(input);
-  }
-
-  private static List<Employee> ReadAllEmployeesFromCsv(StreamReader input)
-  {
-    var employees = new List<Employee>();
     
-    while (input.ReadLine() is { } str)
-      employees.Add(ParseEmployee(str));
-    
-    return employees;
-  }
+    internal CsvEmployeesRepo(string fileName, EmployeeFactory employeeFactory)
+    {
+        _fileName = fileName;
+        _employeeFactory = employeeFactory;
+    }
 
-  private static void SkipHeader(TextReader input) => input.ReadLine();
+    void IEmployeesRepo.Load()
+    {
+        using StreamReader input = new(_fileName);
+        SkipHeader(input);
+        
+        ReadAllEmployeesFromCsv(input);
+    }
 
-  private static Employee ParseEmployee(string str)
-  {
-    var employeeData = str.Split(new char[] { ',' }, 1000);
-    
-    Employee employee = new(
-      employeeData[1].Trim(), 
-      employeeData[0].Trim(), 
-      employeeData[2].Trim(),
-      employeeData[3].Trim());
-    
-    return employee;
-  }
+    List<Employee> IEmployeesRepo.Employees => _employees;
+
+    private void ReadAllEmployeesFromCsv(StreamReader input)
+    {
+        while (input.ReadLine() is { } str)
+            _employees.Add(_employeeFactory.ParseEmployee(str));
+    }
+
+    private static void SkipHeader(TextReader input) => input.ReadLine();
 }
